@@ -1,0 +1,50 @@
+version: 0.2
+env:
+  variables:
+    S3_BUCKET_BUILD: "ntvlibrary-20211203"
+    API_KEY: "nqcJohwscpfzuDqwccpjf}sFwwrj5grv" # production API Key
+    STAG_API_KEY: "rjewp^augexvopbmIszdyh7gfibmu.Sw" # staging API Key
+    S3_ROOTPATH: "output/"
+    S3_SOURCEPATH: "source/"
+    KEYPAIRID: "K264ZT8PDBABEZ"
+    PEMPATH: "../pem/private_key.pem"
+    PROJECTNAME: "ntv"
+    SECRETKEYJWT: "bm2015thbiBTeXN0ZW0U2Fpc012h106="
+    S3_BUCKET: "ntvlibrary-20211227"
+    CLOUDFRONT_ID: "d3gct02wn4qhju"
+phases:
+  install:
+    runtime-versions:
+      nodejs: 12.x
+    commands:
+      - echo Nothing to do in the install phase...
+  pre_build:
+    commands:
+      # set S3 BUCKET and stackname
+      - echo START pre_build phase...
+      # set environment stage : production/staging
+      - |-
+        [ ! -z "$NTV_STAGE" ] && echo $NTV_STAGE || export NTV_STAGE=staging
+      - echo $NTV_STAGE
+      # set API Key
+      - |-
+        [ "$NTV_STAGE" == "production" ] && export NTV_API_KEY=$API_KEY || export NTV_API_KEY=$STAG_API_KEY
+      - echo $NTV_API_KEY
+      - export STACKNAME=NTV-$NTV_STAGE
+      - ls
+      - cd src && npm install
+      - cd ..
+      - ls
+      - echo DONE pre_build phase...
+  build:
+    commands:
+      - sam package --debug --template-file ntv.yaml
+        --s3-bucket $S3_BUCKET_BUILD
+        --output-template-file outNTV.yaml
+      - sam deploy --stack-name $STACKNAME
+        --capabilities CAPABILITY_IAM
+        --parameter-overrides StageName=$NTV_STAGE ApiKey=$NTV_API_KEY S3Bucket=$S3_BUCKET RootPath=$S3_ROOTPATH SourcePath=$S3_SOURCEPATH KeyPairId=$KEYPAIRID PemPath=$PEMPATH ProjectName=$PROJECTNAME SecretKeyJWT=$SECRETKEYJWT CloudFrontId=$CLOUDFRONT_ID
+        --template-file outNTV.yaml
+  post_build:
+    commands:
+      - echo Build completed

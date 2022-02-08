@@ -1,0 +1,141 @@
+{
+  "Queue": "arn:aws:mediaconvert:ap-northeast-1:097316358141:queues/Default",
+  "UserMetadata": {},
+  "Role": "arn:aws:iam::097316358141:role/service-role/MediaConvert_Full_Access_Role",
+  "Settings": {
+    "TimecodeConfig": {
+      "Source": "ZEROBASED"
+    },
+    "OutputGroups": [
+      {
+        "Name": "CMAF",
+        "Outputs": [
+          {
+            "ContainerSettings": {
+              "Container": "CMFC",
+              "CmfcSettings": {}
+            },
+            "VideoDescription": {
+              "Width": 1920,
+              "Height": 1080,
+              "CodecSettings": {
+                "Codec": "H_265",
+                "H265Settings": {
+                  "FramerateDenominator": 1,
+                  "Bitrate": 3600000,
+                  "FramerateControl": "SPECIFIED",
+                  "RateControlMode": "CBR",
+                  "CodecProfile": "MAIN_MAIN",
+                  "FramerateNumerator": 25,
+                  "CodecLevel": "AUTO",
+                  "QualityTuningLevel": "SINGLE_PASS",
+                  "WriteMp4PackagingType": "HEV1"
+                }
+              }
+            },
+            "NameModifier": "1080Modifier"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "CMFC"
+            },
+            "AudioDescriptions": [
+              {
+                "AudioSourceName": "Audio Selector 1",
+                "CodecSettings": {
+                  "Codec": "AAC",
+                  "AacSettings": {
+                    "Bitrate": 96000,
+                    "CodingMode": "CODING_MODE_2_0",
+                    "SampleRate": 48000
+                  }
+                }
+              }
+            ],
+            "NameModifier": "AudioModifier"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "CMFC",
+              "CmfcSettings": {}
+            },
+            "VideoDescription": {
+              "Width": 1280,
+              "Height": 720,
+              "CodecSettings": {
+                "Codec": "H_265",
+                "H265Settings": {
+                  "FramerateDenominator": 1,
+                  "Bitrate": 2400000,
+                  "FramerateControl": "SPECIFIED",
+                  "RateControlMode": "CBR",
+                  "CodecProfile": "MAIN_MAIN",
+                  "FramerateNumerator": 25,
+                  "CodecLevel": "AUTO",
+                  "QualityTuningLevel": "SINGLE_PASS",
+                  "WriteMp4PackagingType": "HEV1"
+                }
+              }
+            },
+            "NameModifier": "720Modifier"
+          },
+          {
+            "ContainerSettings": {
+              "Container": "CMFC",
+              "CmfcSettings": {}
+            },
+            "VideoDescription": {
+              "Width": 640,
+              "Height": 360,
+              "CodecSettings": {
+                "Codec": "H_265",
+                "H265Settings": {
+                  "FramerateDenominator": 1,
+                  "Bitrate": 1200000,
+                  "FramerateControl": "SPECIFIED",
+                  "RateControlMode": "CBR",
+                  "CodecProfile": "MAIN_MAIN",
+                  "FramerateNumerator": 25,
+                  "CodecLevel": "AUTO",
+                  "QualityTuningLevel": "SINGLE_PASS",
+                  "WriteMp4PackagingType": "HEV1"
+                }
+              }
+            },
+            "NameModifier": "360Modifier"
+          }
+        ],
+        "OutputGroupSettings": {
+          "Type": "CMAF_GROUP_SETTINGS",
+          "CmafGroupSettings": {
+            "TargetDurationCompatibilityMode": "LEGACY",
+            "WriteHlsManifest": "ENABLED",
+            "SegmentLength": 10,
+            "SegmentLengthControl": "GOP_MULTIPLE",
+            "Destination": "<<outputPath>>",
+            "FragmentLength": 2,
+            "SegmentControl": "SEGMENTED_FILES",
+            "ImageBasedTrickPlay": "NONE"
+          }
+        }
+      }
+    ],
+    "Inputs": [
+      {
+        "AudioSelectors": {
+          "Audio Selector 1": {
+            "DefaultSelection": "DEFAULT"
+          }
+        },
+        "VideoSelector": {},
+        "TimecodeSource": "ZEROBASED",
+        "FileInput": "<<inputPath>>"
+      }
+    ]
+  },
+  "AccelerationSettings": {
+    "Mode": "DISABLED"
+  },
+  "StatusUpdateInterval": "SECONDS_60",
+  "Priority": 0
+}

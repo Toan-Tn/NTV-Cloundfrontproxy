@@ -1,0 +1,286 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  StageName:
+    Type: String
+    Default: staging
+  ApiKey:
+    Type: String
+    Default: ''
+  ProjectName:
+    Type: String
+    Default: 'ntv'
+  SecretKeyJWT:
+    Type: String
+    Default: ''
+  S3Bucket:
+    Type: String
+    Default: ''
+  SourcePath:
+    Type: String
+    Default: ''
+  RootPath:
+    Type: String
+    Default: ''
+  KeyPairId:
+    Type: String
+    Default: ''
+  PemPath:
+    Type: String
+    Default: ''
+  CloudFrontId:
+    Type: String
+    Default: ''
+
+
+Globals:
+  Function:
+    Runtime: nodejs14.x
+    AutoPublishAlias: live
+    DeploymentPreference:
+      Type: AllAtOnce
+    CodeUri: src/
+    Timeout: 30
+    MemorySize: 128
+    Environment:
+      Variables:
+        StageName:
+          Ref: StageName
+        ApiKey:
+          Ref: ApiKey
+        ProjectName:
+          Ref: ProjectName
+        SecretKeyJWT:
+          Ref: SecretKeyJWT
+        S3Bucket:
+          Ref: S3Bucket
+        SourcePath:
+          Ref: SourcePath
+        RootPath:
+          Ref: RootPath
+        KeyPairId:
+          Ref: SourcePath
+        PemPath:
+          Ref: PemPath
+        CloudFrontId:
+          Ref: CloudFrontId
+
+Resources:
+  # Sample Lambda function
+  MakeSignedm3u8:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cloudfront.makeSignedm3u8
+      Policies:
+        - AmazonS3FullAccess
+      Events:
+        MakeSignedGet:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpProxyApi
+            Path: '/{proxy+}'
+            Method: GET
+
+  LoginAdmin:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: backoffice.login
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        LoginAdminAPI:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: '/v1/api/admin/login'
+            Method: POST
+
+  LoginCompany:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: companysite.login
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        LoginCompanyAPI:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: '/v1/api/company/login'
+            Method: POST
+
+  CreateCompany:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: companysite.createCompany
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        CreateCompanyAPI:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: '/v1/api/company/create'
+            Method: POST
+
+  MakeSigned:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: cloudfront.makeSigned
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        MakeSignedAPI:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: '/v1/api/company/makesigned'
+            Method: POST
+
+  MakePresignUpload:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: s3.makePresignUpload
+      Policies:
+        - AmazonDynamoDBFullAccess
+        - AmazonS3FullAccess
+      Events:
+        MakePresignUploadAPI:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: '/v1/api/s3/createpresigned'
+            Method: POST
+
+  MediaConvertFile:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: s3.mediaConvertFile
+      Timeout: 60
+      Policies: 
+        - AWSLambdaExecute
+        - AmazonDynamoDBFullAccess
+        - AmazonS3FullAccess
+      FunctionName: !Join [ "-", [ NTV, !Ref StageName, MediaConvertFile ] ]
+      Events:
+        MediaConvertFileEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref SrcBucket
+            Events: s3:ObjectCreated:Put
+  
+  MediaConvertEventFinished:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: s3.mediaConvertFinished
+      Policies:
+        - AWSLambdaExecute
+        - AmazonDynamoDBFullAccess
+        - AmazonS3FullAccess
+      Timeout: 60
+      Policies: AWSLambdaExecute
+      FunctionName: !Join [ "-", [ NTV, !Ref StageName, MediaConvertEventFinished ] ]
+      Events:
+        Trigger:
+          Type: CloudWatchEvent 
+          Properties:
+            Pattern:
+              source: 
+                - "aws.mediaconvert" 
+              detail: 
+                status: 
+                  - "COMPLETE"
+                  - "ERROR"
+
+  SrcBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Ref: S3Bucket
+
+
+  HttpProxyApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName:
+        Ref: StageName
+      CorsConfiguration:
+        AllowOrigins:
+          - 'https://d3gct02wn4qhju.cloudfront.net'
+        AllowHeaders:
+          - x-api-key
+          - authorization
+          - content-type
+        AllowMethods:
+          - '*'
+        MaxAge: 600
+        AllowCredentials: true
+      Tags:
+        Tag: NTV_CLOUDFRONT_PROXY
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 200
+      FailOnWarnings: true
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName:
+        Ref: StageName
+      Auth:
+        Authorizers:
+          NTVLambdaAuthorizer:
+            AuthorizerPayloadFormatVersion: 2.0
+            FunctionArn:
+              Fn::GetAtt:
+                - NTVLambdaAuth
+                - Arn
+            Identity:
+              Headers:
+                - x-api-key
+        DefaultAuthorizer: NTVLambdaAuthorizer
+      CorsConfiguration:
+        AllowOrigins:
+          - 'https://d3gct02wn4qhju.cloudfront.net'
+        AllowHeaders:
+          - x-api-key
+          - authorization
+          - content-type
+        AllowMethods:
+          - '*'
+        MaxAge: 600
+        AllowCredentials: true
+      Tags:
+        Tag: NTV_CLOUDFRONT_API
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 200
+      FailOnWarnings: true
+
+  NTVLambdaAuth:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: auth.checkauth
+      Environment:
+        Variables:
+          StageName:
+            Ref: StageName
+          ApiKey:
+            Ref: ApiKey
+
+Outputs:
+  HttpProxyUrl:
+    Description: URL of NTV CloudFront proxy API endpoint
+    Value:
+      Fn::Sub: 'https://${HttpProxyApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/'
+  HttpApiUrl:
+    Description: URL of NTV API endpoint
+    Value:
+      Fn::Sub: 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${StageName}/'
+  
+  HttpApiId:
+    Description: Api id of HttpApi
+    Value:
+      Ref: HttpApi
+  ApiKey:
+    Description: API Key
+    Value:
+      Ref: ApiKey

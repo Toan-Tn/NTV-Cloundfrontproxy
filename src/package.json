@@ -1,0 +1,22 @@
+{
+  "name": "ntv_project",
+  "version": "1.0.0",
+  "description": "NTV Project API",
+  "main": "cloudfront.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ntv"
+  ],
+  "author": "hungdh@saishunkansys.com",
+  "license": "ISC",
+  "dependencies": {
+    "json-placeholder-replacer": "^1.0.35",
+    "mime": "^3.0.0",
+    "ntv_module": "file:ntv_module"
+  },
+  "devDependencies": {
+    "eslint-config-airbnb": "^19.0.2"
+  }
+}
